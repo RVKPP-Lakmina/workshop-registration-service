@@ -1,0 +1,105 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+enum WorkshopStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum RegStatus {
+  ACTIVE
+  WAITLISTED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  role         Role
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  registered Registration[] @relation("RegisteredBy")
+  cancelled  Registration[] @relation("CancelledBy")
+  audits     AuditLog[]
+
+  @@map("users")
+}
+
+model Workshop {
+  id          String         @id @default(uuid()) @db.Uuid
+  code        String         @unique
+  title       String
+  description String?
+  instructor  String
+  location    String
+  startsAt    DateTime       @map("starts_at")
+  endsAt      DateTime       @map("ends_at")
+  capacity    Int
+  activeCount Int            @default(0) @map("active_count")
+  status      WorkshopStatus @default(SCHEDULED)
+  createdById String         @map("created_by_id") @db.Uuid
+  updatedById String         @map("updated_by_id") @db.Uuid
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  registrations Registration[]
+
+  @@index([startsAt])
+  @@index([status])
+  @@map("workshops")
+}
+
+model Registration {
+  id             String    @id @default(uuid()) @db.Uuid
+  workshopId     String    @map("workshop_id") @db.Uuid
+  attendeeName   String    @map("attendee_name")
+  attendeeEmail  String    @map("attendee_email")
+  status         RegStatus
+  registeredById String    @map("registered_by_id") @db.Uuid
+  registeredAt   DateTime  @default(now()) @map("registered_at")
+  cancelledById  String?   @map("cancelled_by_id") @db.Uuid
+  cancelledAt    DateTime? @map("cancelled_at")
+  cancelReason   String?   @map("cancel_reason")
+  promotedAt     DateTime? @map("promoted_at")
+
+  workshop     Workshop @relation(fields: [workshopId], references: [id])
+  registeredBy User     @relation("RegisteredBy", fields: [registeredById], references: [id])
+  cancelledBy  User?    @relation("CancelledBy", fields: [cancelledById], references: [id])
+
+  @@index([workshopId, status])
+  @@map("registrations")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement())
+  actorId    String   @map("actor_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  before     Json?
+  after      Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([createdAt])
+  @@map("audit_logs")
+}
