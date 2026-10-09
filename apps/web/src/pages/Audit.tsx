@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { get } from '../api/client'
-import { Button, Card, ErrorBox} from '../components/ui'
+import { Button, Card, ErrorBox, PageLoader } from '../components/ui'
 import { auditSummary, fmtDate } from '../lib'
 import type { AuditEntry, Paged } from '../types'
 
@@ -23,7 +23,7 @@ export default function Audit() {
       <h1 className="text-3xl font-bold">Activity log</h1>
       <p className="text-lg text-slate-600">Who changed what, and when.</p>
       <ErrorBox error={error} />
-      {isLoading && <p className="text-lg">Loading...</p>}
+      {isLoading && <PageLoader />}
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-base">

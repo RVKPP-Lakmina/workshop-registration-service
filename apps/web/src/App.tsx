@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router'
 import { homeFor, useAuth } from './auth/AuthContext'
 import { RequireRole } from './auth/RequireRole'
 import { Layout } from './components/Layout'
+import { PageLoader } from './components/ui'
 import Login from './pages/Login'
 import Workshops from './pages/Workshops'
 import WorkshopDetail from './pages/WorkshopDetail'
@@ -11,7 +12,7 @@ import Audit from './pages/Audit'
 
 function Home() {
   const { user, loading } = useAuth()
-  if (loading) return <p className="p-8 text-lg">Loading...</p>
+  if (loading) return <PageLoader />
   return <Navigate to={user ? homeFor(user.role) : '/login'} replace />
 }
 

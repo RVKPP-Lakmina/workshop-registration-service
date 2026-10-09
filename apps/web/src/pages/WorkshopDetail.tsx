@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ApiError, asList, get, post } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/Toast'
-import { Badge, Button, Card, ErrorBox, Field, Input} from '../components/ui'
+import { Badge, Button, Card, ErrorBox, Field, Input, PageLoader } from '../components/ui'
 import { fmtDate } from '../lib'
 import { SeatsBadge } from './Workshops'
 import type { Registration, Workshop } from '../types'
@@ -86,7 +86,7 @@ export default function WorkshopDetail() {
 
   const w = ws.data
   if (ws.error) return <ErrorBox error={ws.error} />
-  if (!w) return <p className="text-lg">Loading...</p>
+  if (!w) return <PageLoader />
 
   const all = regs.data ?? []
   const active = all.filter((r) => r.status === 'ACTIVE')

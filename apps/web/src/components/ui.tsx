@@ -57,3 +57,29 @@ export function ErrorBox({ error }: { error: unknown }) {
     </p>
   )
 }
+
+/** Circular loading indicator. `size` is a Tailwind size class, e.g. "h-5 w-5". */
+export function Spinner({ size = 'h-6 w-6', label = 'Loading', className = '' }: { size?: string; label?: string; className?: string }) {
+  return (
+    <svg
+      role="status"
+      aria-label={label}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={`${size} animate-spin text-indigo-600 motion-reduce:animate-[spin_2.5s_linear_infinite] ${className}`}
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeOpacity="0.2" strokeWidth="3" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** Centred spinner with a caption, for first loads of a page or section. */
+export function PageLoader({ text = 'Loading...' }: { text?: string }) {
+  return (
+    <div className="flex flex-col items-center gap-3 py-12 text-slate-600">
+      <Spinner size="h-12 w-12" label={text} />
+      <p className="text-lg">{text}</p>
+    </div>
+  )
+}
