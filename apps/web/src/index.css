@@ -4,7 +4,14 @@ html {
   font-size: 17px;
 }
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply text-slate-900 antialiased;
+  /* Classic diamond lattice in indigo tints (inline SVG, no image file) over a soft, formal gradient. */
+  background-color: #eef0fa;
+  background-image:
+    radial-gradient(ellipse 90% 45% at 50% -8%, rgb(99 102 241 / 0.16), transparent 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23312e81' stroke-opacity='.075' stroke-width='1'%3E%3Cpath d='M36 0 72 36 36 72 0 36Z'/%3E%3Cpath d='M36 15 57 36 36 57 15 36Z'/%3E%3C/g%3E%3Cg fill='%23312e81' fill-opacity='.09'%3E%3Ccircle cx='36' cy='36' r='1.8'/%3E%3Ccircle cx='0' cy='0' r='1.8'/%3E%3Ccircle cx='72' cy='0' r='1.8'/%3E%3Ccircle cx='0' cy='72' r='1.8'/%3E%3Ccircle cx='72' cy='72' r='1.8'/%3E%3C/g%3E%3C/svg%3E"),
+    linear-gradient(180deg, #f1f2fb 0%, #f6f4fd 55%, #eef1f7 100%);
+  background-attachment: fixed;
 }
 
 /* Tailwind v4 resets buttons to the default cursor; restore the pointer on every clickable control. */
