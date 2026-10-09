@@ -1,7 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import App from '../App'
-import { tokenStore } from '../api/client'
 import { admin, manager, staff } from '../test/fixtures'
 import { renderApp } from '../test/render'
 import { server } from '../test/server'
@@ -70,12 +69,9 @@ describe('routing and role guards', () => {
     expect(await screen.findByRole('heading', { name: 'Workshops' })).toBeInTheDocument()
   })
 
-  it('falls back to /login when the stored token is rejected', async () => {
-    tokenStore.set('stale')
-    server.use(http.get('/api/auth/me', () => HttpResponse.json({ message: 'Unauthorized' }, { status: 401 })))
+  it('falls back to /login when there is no valid session cookie', async () => {
     renderApp(<App />, { route: '/workshops' })
     await waitFor(() => expect(loc()).toBe('/login'))
-    expect(tokenStore.get()).toBeNull()
   })
 })
 

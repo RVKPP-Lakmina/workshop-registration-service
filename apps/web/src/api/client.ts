@@ -1,31 +1,5 @@
 import { config } from '../config'
 
-const TOKEN_KEY = 'workshop_token'
-
-export const tokenStore = {
-  get: () => {
-    try {
-      return localStorage.getItem(TOKEN_KEY)
-    } catch {
-      return null
-    }
-  },
-  set: (t: string) => {
-    try {
-      localStorage.setItem(TOKEN_KEY, t)
-    } catch {
-      /* ignore */
-    }
-  },
-  clear: () => {
-    try {
-      localStorage.removeItem(TOKEN_KEY)
-    } catch {
-      /* ignore */
-    }
-  },
-}
-
 export class ApiError extends Error {
   status: number
   code?: string
@@ -58,14 +32,15 @@ export async function api<T>(
   path: string,
   opts: { body?: unknown; params?: Params } = {},
 ): Promise<T> {
-  const token = tokenStore.get()
   let res: Response
   try {
     res = await fetch(`${config.apiBaseUrl}${path}${qs(opts.params)}`, {
       method,
+      // Auth is an HttpOnly session cookie; X-Requested-With is the CSRF defence the API requires.
+      credentials: 'include',
       headers: {
+        'X-Requested-With': 'XMLHttpRequest',
         ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     })
@@ -91,7 +66,6 @@ export async function api<T>(
     const d = (data ?? {}) as { code?: string; message?: string | string[] }
     const msg = Array.isArray(d.message) ? d.message.join('. ') : d.message
     if (res.status === 401 && path !== '/auth/login') {
-      tokenStore.clear()
       onUnauthorized()
     }
     throw new ApiError(res.status, msg || `Something went wrong (${res.status}).`, d.code)

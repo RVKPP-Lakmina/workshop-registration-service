@@ -53,11 +53,13 @@ describe('notification bell', () => {
     expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
   })
 
-  it('only counts entries newer than the last one seen on this device', async () => {
-    localStorage.setItem(`workshop_audit_seen_${manager.id}`, '99')
+  it('only counts entries newer than the last one seen in this session', async () => {
     serveAudit()
-    renderApp(<App />, { route: '/workshops', user: manager })
-    expect(await screen.findByRole('button', { name: 'Notifications, 1 new' })).toBeInTheDocument()
+    const { user } = renderApp(<App />, { route: '/workshops', user: manager })
+    await user.click(await screen.findByRole('button', { name: /^Notifications, \d+ new$/ }))
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
+    expect(localStorage.length).toBe(0)
   })
 
   it('shows an empty state and navigates to the activity log', async () => {

@@ -6,7 +6,6 @@ import { MemoryRouter, useLocation } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from '../auth/AuthContext'
 import { ToastProvider } from '../components/Toast'
-import { tokenStore } from '../api/client'
 import { http, HttpResponse } from 'msw'
 import { server } from './server'
 import type { User } from '../types'
@@ -18,13 +17,12 @@ export function LocationDisplay() {
 
 interface Opts {
   route?: string
-  /** Pre-authenticate as this user (token is stored; /auth/me must return it). */
+  /** Pre-authenticate as this user (msw's GET /api/auth/me returns it). */
   user?: User | null
 }
 
 export function renderApp(ui: ReactElement, { route = '/', user }: Opts = {}) {
   if (user) {
-    tokenStore.set('test-token')
     server.use(http.get('/api/auth/me', () => HttpResponse.json(user)))
   }
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } })

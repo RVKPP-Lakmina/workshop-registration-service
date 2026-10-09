@@ -9,22 +9,7 @@ import { useDismiss } from './useDismiss'
 
 const RECENT = 5
 
-function readSeen(key: string): string | null {
-  try {
-    return localStorage.getItem(key)
-  } catch {
-    return null
-  }
-}
-function writeSeen(key: string, value: string) {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-    /* storage unavailable: the badge just reappears next visit */
-  }
-}
-
-/** Bell showing the latest activity-log entries; the badge counts those not yet seen on this device. */
+/** Bell showing the latest activity-log entries; the badge counts those not yet seen this session. */
 export function NotificationBell() {
   const { user } = useAuth()
   const [open, setOpen] = useState(false)
@@ -32,8 +17,8 @@ export function NotificationBell() {
   const close = useCallback(() => setOpen(false), [])
   useDismiss(wrapper, open, close)
 
-  const seenKey = `workshop_audit_seen_${user?.id ?? 'anon'}`
-  const [seen, setSeen] = useState<string | null>(() => readSeen(seenKey))
+  // Kept in memory only: the badge reappears after a page reload.
+  const [seen, setSeen] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['audit', 'recent'],
@@ -50,7 +35,6 @@ export function NotificationBell() {
     if (!open && items[0]) {
       const latest = String(items[0].id)
       setSeen(latest)
-      writeSeen(seenKey, latest)
     }
     setOpen((v) => !v)
   }
