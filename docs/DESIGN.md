@@ -1,0 +1,21 @@
+# Design notes: Workshop Registration Service
+
+**Stack and why.** NestJS + Prisma + PostgreSQL for the API: guards and decorators make role checks declarative, and Postgres gives row-level locking and constraints that enforce the capacity rule. React + Vite + React Query for a small SPA that stays in sync with seat counts. Redis only backs the rate limiter, so limits are shared across API replicas. nginx serves the SPA and rate-limits at the edge; Docker Compose runs it all with one command.
+
+**Preventing over-registration.** Registering is one transaction that runs a single atomic statement: `UPDATE workshops SET active_count = active_count + 1 WHERE id = ? AND status = 'SCHEDULED' AND active_count < capacity`. Postgres locks the row, so concurrent requests queue and each re-checks the condition against the latest committed value; the last seat can only be won once. If no row is updated the request gets `409 WORKSHOP_FULL` (or joins the waitlist when the user confirms). A database `CHECK (active_count <= capacity)` is a backstop, and a partial unique index stops the same email holding two live registrations in one workshop. The e2e suite fires 30 parallel requests at a 5-seat workshop and asserts exactly 5 succeed. Seats are never counted in Redis or in application memory, so there is one source of truth. Cancelling is also guarded (`WHERE status IN ('ACTIVE','WAITLISTED')`), so a double cancel cannot free two seats, and lowering capacity below the seats already taken is refused.
+
+**Access control.** Enforced by global guards on the backend: JWT auth, then a roles guard with default deny (a route without `@Roles` returns 403). The user is reloaded on every request, so deactivation and role changes apply immediately. The UI hides what a role cannot do, but nothing depends on that. Admins manage accounts only, as the brief's matrix says, and cannot demote or deactivate themselves.
+
+**History and audit.** Registrations are never deleted; cancellations record who, when and an optional reason. Every mutation (workshops, registrations, accounts and roles) also writes an audit-log row in the same transaction. Admins see account events; Manager and Staff see workshop and registration events.
+
+**Waitlist (bonus).** When a workshop is full, staff are asked "Add to waitlist?". On cancellation the oldest waitlisted attendee is promoted automatically in the same transaction (`FOR UPDATE SKIP LOCKED`); raising capacity promotes waitlisted attendees into the new seats.
+
+**Finding workshops.** `GET /workshops` filters by date range, status, "has seats", location and free text. The UI offers Today / This week / Next 7 days presets and an "only with seats left" toggle.
+
+**Rate limiting and CORS (three layers).** nginx: 30 req/s per IP (burst 60) on `/api`, and 5 req/min on login. App (Redis-backed throttler): 120/min per user, 10 login attempts/min per IP and email, 60 registration writes/min per user. Limits are generous per IP because the front desk shares one office address; the strict limits are keyed per user or login attempt. CORS is an explicit origin allowlist. `infra/aws` defines an API Gateway HTTP API with the same CORS allowlist and stage/route throttling (validated, never applied).
+
+**Trade-offs.** A denormalised `active_count` makes the capacity check a single atomic update, cheaper and simpler than counting under a lock, at the cost of keeping it in sync inside transactions. JWT in localStorage is simple but exposed to XSS, and there are no refresh tokens (8-hour sessions). Waitlist promotion is automatic rather than an "offer" the attendee must accept.
+
+**Assumptions.** Attendees are unique per workshop by email (case-insensitive). Times are stored in UTC and shown in the browser's local time. Workshop codes are unique and upper-cased. The three locations (Main Campus, City Centre, Lakeside) are invented for the seed data.
+
+**Skipped.** Not deployed (Terraform is validated only). No email or SMS notifications to attendees. No frontend unit or browser-driven tests: the API has e2e tests, while the UI is type-checked, linted and exercised through the API only. No pagination on workshop and user lists. No refresh tokens or password-reset flow.
