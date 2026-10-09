@@ -6,3 +6,15 @@ html {
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
+
+/* Tailwind v4 resets buttons to the default cursor; restore the pointer on every clickable control. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  select:not(:disabled),
+  summary,
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled) {
+    cursor: pointer;
+  }
+}
