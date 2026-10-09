@@ -104,10 +104,14 @@ describe('navigation', () => {
     expect(linkNames()).not.toContain('Users')
   })
 
-  it('shows the user name/role and logs out back to /login', async () => {
+  it('shows the first name, opens the account menu and logs out back to /login', async () => {
     const { user } = renderApp(<App />, { route: '/workshops', user: manager })
-    expect(await screen.findByText('Mia Manager (manager)')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Log out' }))
+    const trigger = await screen.findByRole('button', { name: 'Mia' })
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await user.click(trigger)
+    expect(await screen.findByRole('menu')).toHaveTextContent('Mia Manager')
+    expect(screen.getByRole('menu')).toHaveTextContent('MANAGER')
+    await user.click(screen.getByRole('menuitem', { name: 'Log out' }))
     await waitFor(() => expect(loc()).toBe('/login'))
   })
 })
