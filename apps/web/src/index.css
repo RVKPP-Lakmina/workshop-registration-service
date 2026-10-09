@@ -18,3 +18,60 @@ body {
     cursor: pointer;
   }
 }
+
+/* Header dropdown + notification animations. */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes bell-ring {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20% {
+    transform: rotate(14deg);
+  }
+  40% {
+    transform: rotate(-12deg);
+  }
+  60% {
+    transform: rotate(8deg);
+  }
+  80% {
+    transform: rotate(-5deg);
+  }
+}
+.animate-menu-in {
+  transform-origin: top right;
+  animation: menu-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-item-in {
+  animation: item-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.group:hover .animate-bell-hover {
+  animation: bell-ring 0.7s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-menu-in,
+  .animate-item-in,
+  .group:hover .animate-bell-hover {
+    animation: none;
+  }
+}
