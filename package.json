@@ -1,0 +1,31 @@
+{
+  "name": "workshop-registration-service",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "check-types": "turbo run check-types",
+    "db:generate": "pnpm --filter api db:generate",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:seed": "pnpm --filter api db:seed",
+    "env:init": "node scripts/env-init.mjs",
+    "docker": "node scripts/compose.mjs",
+    "docker:up": "node scripts/compose.mjs up --build",
+    "docker:down": "node scripts/compose.mjs down",
+    "docker:config": "node scripts/compose.mjs config -q",
+    "docker:dev-deps": "node scripts/compose.mjs --dev up -d --wait",
+    "docker:dev-deps:down": "node scripts/compose.mjs --dev down",
+    "with-env": "node scripts/with-env.mjs"
+  },
+  "devDependencies": {
+    "prettier": "3.9.6",
+    "turbo": "^2.11.7",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=22"
+  }
+}
