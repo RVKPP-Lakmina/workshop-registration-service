@@ -38,11 +38,11 @@ pnpm dev             # web http://localhost:5173, api http://localhost:3000/api
 
 ## Seeded logins (dev only)
 
-| Role    | Email                  | Password      | Can do |
-|---------|------------------------|---------------|--------|
-| Admin   | admin@workshop.local     | Admin123!     | Create users and set roles (nothing else) |
-| Manager | manager@workshop.local   | Manager123!   | Add/edit workshops, register/cancel, view everything |
-| Staff   | staff@workshop.local     | Staff123!     | Register/cancel, view workshops, registrations and history |
+| Role    | Email                    | Password    | Can do |
+|---------|--------------------------|-------------|--------|
+| Admin   | admin@workshop.local     | Admin123!   | Create users and set roles (nothing else) |
+| Manager | manager@workshop.local   | Manager123! | Add/edit workshops, register/cancel, view everything |
+| Staff   | staff@workshop.local     | Staff123!   | Register/cancel, view workshops, registrations and history |
 
 Eight sample workshops are seeded (this week and next, three locations), including one full workshop with a waitlist (`COD-310`), one cancelled and one completed. Seeding runs automatically in Docker while `SEED_ON_START=true`; turn it off for any real deployment.
 
@@ -61,20 +61,20 @@ What each one proves is explained in [docs/SETUP.md](docs/SETUP.md#5-running-the
 
 ## Project map
 
-```
-apps/api/        NestJS API (auth, users, workshops, registrations, audit, health) + prisma/
-apps/web/        React SPA
-env/             Environment templates (.env.<APP_ENV>.example) and your git-ignored real files
-scripts/         Cross-platform helpers behind pnpm env:init / docker:* / with-env
-infra/nginx/     nginx.conf (rate limits, SPA fallback, /api proxy)
-infra/aws/       Terraform: API Gateway HTTP API with CORS and throttling (validated, never applied)
-docs/            SETUP, DEPLOYMENT, TERRAFORM, DESIGN
-.vscode/         Debug configurations, tasks and recommended extensions
-.github/         CI: lint, typecheck, build, tests; then build and push images to GHCR on main
-docker-compose.yml         full stack
-docker-compose.dev.yml     postgres + redis only (pnpm docker:dev-deps)
-docker-compose.debug.yml   optional override: publishes the API debug port 9229
-```
+| Path | What it is |
+|---|---|
+| [`apps/api`](apps/api) | NestJS API: auth, users, workshops, registrations, audit, health, plus the Prisma schema and seed |
+| [`apps/web`](apps/web) | React single-page app |
+| [`env`](env) | Environment templates (`.env.<APP_ENV>.example`); your real `.env.*` files stay git-ignored |
+| [`scripts`](scripts) | Cross-platform helpers behind `pnpm env:init`, `pnpm docker:*` and `pnpm with-env` |
+| [`infra/nginx`](infra/nginx) | nginx config template: SPA fallback, `/api` proxy, rate limits |
+| [`infra/aws`](infra/aws) | Terraform for an API Gateway HTTP API with CORS and throttling (validated, never applied) |
+| [`docs`](docs) | Setup, deployment, Terraform and design guides |
+| [`.vscode`](.vscode) | Debug configurations, tasks and recommended extensions |
+| [`.github/workflows`](.github/workflows) | CI: lint, typecheck, build and tests; image build and push to GHCR on `main` |
+| [`docker-compose.yml`](docker-compose.yml) | Full stack: Postgres, Redis, API and nginx |
+| [`docker-compose.dev.yml`](docker-compose.dev.yml) | Postgres and Redis only, for local coding (`pnpm docker:dev-deps`) |
+| [`docker-compose.debug.yml`](docker-compose.debug.yml) | Optional override that publishes the API debug port 9229 |
 
 ## API summary (`/api`)
 
