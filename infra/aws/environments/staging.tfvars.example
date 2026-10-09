@@ -1,0 +1,19 @@
+# staging environment.  terraform plan -var-file=environments/staging.tfvars
+# Copy to environments/staging.tfvars (gitignored). Keep backend_url in sync with the API origin and
+# cors_allowed_origins with CORS_ORIGINS in env/.env.staging. Use a separate state per environment.
+environment = "staging"
+aws_region  = "us-east-1"
+
+# Origin that serves /api (ALB / ECS service), no trailing slash.
+backend_url = "https://api-origin.staging.example.com"
+
+# Browser origins allowed by CORS.
+cors_allowed_origins = ["https://staging.workshops.example.com"]
+
+# API Gateway throttling (requests/second and burst).
+default_rate_limit  = 50
+default_burst_limit = 100
+login_rate_limit    = 2
+login_burst_limit   = 5
+
+log_retention_days = 14

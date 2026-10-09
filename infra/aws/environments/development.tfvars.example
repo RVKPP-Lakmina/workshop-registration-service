@@ -1,0 +1,19 @@
+# development environment.  terraform plan -var-file=environments/development.tfvars
+# Copy to environments/development.tfvars (gitignored). Keep backend_url in sync with the API origin and
+# cors_allowed_origins with CORS_ORIGINS in env/.env.development. Use a separate state per environment.
+environment = "development"
+aws_region  = "us-east-1"
+
+# Origin that serves /api (ALB / ECS service), no trailing slash.
+backend_url = "http://localhost:3000"
+
+# Browser origins allowed by CORS.
+cors_allowed_origins = ["http://localhost:5173", "http://localhost:8080"]
+
+# API Gateway throttling (requests/second and burst).
+default_rate_limit  = 50
+default_burst_limit = 100
+login_rate_limit    = 5
+login_burst_limit   = 10
+
+log_retention_days = 7
