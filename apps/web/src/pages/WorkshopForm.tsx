@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { get, patch, post } from '../api/client'
 import { useToast } from '../components/Toast'
-import { Button, Card, ErrorBox, Field, Input, Select} from '../components/ui'
+import { Button, Card, ErrorBox, Field, Input, PageLoader, Select } from '../components/ui'
 import { toLocalInput } from '../lib'
 import { LOCATIONS, type Workshop, type WorkshopInput, type WorkshopStatus } from '../types'
 
@@ -149,6 +149,6 @@ export default function WorkshopForm() {
   const q = useQuery({ queryKey: ['workshop', id], queryFn: () => get<Workshop>(`/workshops/${id}`), enabled: !!id })
   if (!id) return <Editor />
   if (q.error) return <ErrorBox error={q.error} />
-  if (!q.data) return <p className="text-lg">Loading...</p>
+  if (!q.data) return <PageLoader />
   return <Editor key={q.data.id} existing={q.data} />
 }

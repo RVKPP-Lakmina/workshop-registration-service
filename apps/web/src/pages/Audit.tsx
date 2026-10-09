@@ -1,17 +1,11 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { get } from '../api/client'
-import { Button, Card, ErrorBox} from '../components/ui'
-import { fmtDate } from '../lib'
+import { Button, Card, ErrorBox, PageLoader } from '../components/ui'
+import { auditSummary, fmtDate } from '../lib'
 import type { AuditEntry, Paged } from '../types'
 
 const PAGE_SIZE = 25
-
-function summary(e: AuditEntry) {
-  const after = e.after as Record<string, unknown> | null | undefined
-  const label = after && (after.title ?? after.name ?? after.attendeeName ?? after.code)
-  return typeof label === 'string' ? label : e.entityId
-}
 
 export default function Audit() {
   const [page, setPage] = useState(1)
@@ -29,7 +23,7 @@ export default function Audit() {
       <h1 className="text-3xl font-bold">Activity log</h1>
       <p className="text-lg text-slate-600">Who changed what, and when.</p>
       <ErrorBox error={error} />
-      {isLoading && <p className="text-lg">Loading...</p>}
+      {isLoading && <PageLoader />}
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-base">
@@ -49,7 +43,7 @@ export default function Audit() {
                   <td className="pr-3 font-semibold">{e.action.replace(/[._]/g, ' ').toLowerCase()}</td>
                   <td>
                     <span className="text-slate-500">{e.entityType.toLowerCase()}: </span>
-                    {summary(e)}
+                    {auditSummary(e)}
                   </td>
                 </tr>
               ))}

@@ -1,7 +1,6 @@
 import { screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import App from '../App'
-import { tokenStore } from '../api/client'
 import { admin, manager, staff } from '../test/fixtures'
 import { renderApp } from '../test/render'
 import { server } from '../test/server'
@@ -70,12 +69,9 @@ describe('routing and role guards', () => {
     expect(await screen.findByRole('heading', { name: 'Workshops' })).toBeInTheDocument()
   })
 
-  it('falls back to /login when the stored token is rejected', async () => {
-    tokenStore.set('stale')
-    server.use(http.get('/api/auth/me', () => HttpResponse.json({ message: 'Unauthorized' }, { status: 401 })))
+  it('falls back to /login when there is no valid session cookie', async () => {
     renderApp(<App />, { route: '/workshops' })
     await waitFor(() => expect(loc()).toBe('/login'))
-    expect(tokenStore.get()).toBeNull()
   })
 })
 
@@ -104,10 +100,14 @@ describe('navigation', () => {
     expect(linkNames()).not.toContain('Users')
   })
 
-  it('shows the user name/role and logs out back to /login', async () => {
+  it('shows the first name, opens the account menu and logs out back to /login', async () => {
     const { user } = renderApp(<App />, { route: '/workshops', user: manager })
-    expect(await screen.findByText('Mia Manager (manager)')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Log out' }))
+    const trigger = await screen.findByRole('button', { name: 'Mia' })
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    await user.click(trigger)
+    expect(await screen.findByRole('menu')).toHaveTextContent('Mia Manager')
+    expect(screen.getByRole('menu')).toHaveTextContent('MANAGER')
+    await user.click(screen.getByRole('menuitem', { name: 'Log out' }))
     await waitFor(() => expect(loc()).toBe('/login'))
   })
 })

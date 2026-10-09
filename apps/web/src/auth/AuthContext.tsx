@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { get, post, setUnauthorizedHandler, tokenStore } from '../api/client'
+import { get, post, setUnauthorizedHandler } from '../api/client'
 import type { LoginResponse, Role, User } from '../types'
 
 interface AuthState {
@@ -20,20 +20,26 @@ export function homeFor(role: Role) {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient()
   const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(() => !!tokenStore.get())
+  const [loading, setLoading] = useState(true)
 
-  const logout = useCallback(() => {
-    tokenStore.clear()
+  const clearSession = useCallback(() => {
     setUser(null)
     qc.clear()
   }, [qc])
 
-  useEffect(() => {
-    setUnauthorizedHandler(logout)
-  }, [logout])
+  const logout = useCallback(() => {
+    // Ask the server to clear the cookie; the local session ends regardless of the outcome.
+    post('/auth/logout')
+      .catch(() => {})
+      .finally(clearSession)
+  }, [clearSession])
 
   useEffect(() => {
-    if (!tokenStore.get()) return
+    // A 401 mid-session means the cookie is gone: just drop local state.
+    setUnauthorizedHandler(clearSession)
+  }, [clearSession])
+
+  useEffect(() => {
     let cancelled = false
     get<User>('/auth/me')
       .then((u) => {
@@ -50,7 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await post<LoginResponse>('/auth/login', { email, password })
-    tokenStore.set(res.token)
     setUser(res.user)
     return res.user
   }, [])

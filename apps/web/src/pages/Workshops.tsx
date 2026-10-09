@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { asList, get } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import { Badge, Button, Card, ErrorBox, Input, Select} from '../components/ui'
+import { useDebouncedValue } from '../components/useDebouncedValue'
+import { Badge, Button, Card, ErrorBox, Input, PageLoader, Select, Spinner } from '../components/ui'
 import { fmtDate, range, type Preset } from '../lib'
 import { LOCATIONS, type Workshop } from '../types'
 
@@ -32,18 +33,27 @@ export default function Workshops() {
   const [hasSeats, setHasSeats] = useState(false)
   const [q, setQ] = useState('')
 
-  const r = range(preset, cFrom, cTo)
-  const params = { ...r, status, location, q: q.trim(), hasSeats: hasSeats ? true : undefined }
+  // Computed once per selection: range() reads the clock, so recomputing it every render would change
+  // the query key each time and refetch in a loop.
+  const r = useMemo(() => range(preset, cFrom, cTo), [preset, cFrom, cTo])
+  const debouncedQ = useDebouncedValue(q.trim())
+  const params = { ...r, status, location, q: debouncedQ, hasSeats: hasSeats ? true : undefined }
 
-  const { data, error, isLoading } = useQuery({
+  // keepPreviousData: the current list stays on screen (dimmed) while a new filter loads, instead of vanishing.
+  const { data, error, isLoading, isFetching } = useQuery({
     queryKey: ['workshops', params],
     queryFn: () => get<Workshop[] | { items: Workshop[] }>('/workshops', params).then(asList),
+    placeholderData: keepPreviousData,
   })
+  const refreshing = isFetching && !isLoading
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-bold">Workshops</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold">Workshops</h1>
+          {refreshing && <Spinner size="h-6 w-6" label="Updating workshops" />}
+        </div>
         {user?.role === 'MANAGER' && (
           <Link to="/workshops/new">
             <Button>+ New workshop</Button>
@@ -70,7 +80,12 @@ export default function Workshops() {
           </div>
         )}
         <div className="grid gap-3 md:grid-cols-4">
-          <Input placeholder="Search name, code, teacher..." value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" />
+          <div className="relative">
+            <Input placeholder="Search name, code, teacher..." value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search" className="pr-11" />
+            {(refreshing || q.trim() !== debouncedQ) && (
+              <Spinner size="h-5 w-5" label="Searching" className="absolute top-1/2 right-3 -translate-y-1/2" />
+            )}
+          </div>
           <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="Status">
             <option value="">Any status</option>
             <option value="SCHEDULED">Scheduled</option>
@@ -91,10 +106,13 @@ export default function Workshops() {
       </Card>
 
       <ErrorBox error={error} />
-      {isLoading && <p className="text-lg">Loading...</p>}
-      {data && data.length === 0 && <p className="text-lg text-slate-600">No workshops match these filters.</p>}
+      {isLoading && <PageLoader text="Loading workshops..." />}
+      {data && data.length === 0 && !refreshing && <p className="text-lg text-slate-600">No workshops match these filters.</p>}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div
+        aria-busy={refreshing}
+        className={`grid gap-4 transition-opacity duration-200 md:grid-cols-2 ${refreshing ? 'pointer-events-none opacity-50' : 'opacity-100'}`}
+      >
         {data?.map((w) => (
           <Link key={w.id} to={`/workshops/${w.id}`} className="block">
             <Card className="h-full transition hover:border-indigo-400 hover:shadow-md">

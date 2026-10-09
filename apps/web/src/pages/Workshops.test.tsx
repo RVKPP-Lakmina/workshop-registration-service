@@ -169,3 +169,58 @@ describe('Workshops page', () => {
     })
   })
 })
+
+describe('time-based presets', () => {
+  const settle = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+  it.each(['Next 7 days', 'Today', 'This week'])('does not refetch in a loop with "%s"', async (label) => {
+    const { seen } = captureWorkshopQueries()
+    const { user } = renderApp(<App />, { route: '/workshops', user: staff })
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    await user.click(screen.getByRole('button', { name: label }))
+    await settle(500)
+    const settled = seen.length
+    await settle(500)
+    expect(seen.length).toBe(settled) // no new requests while nothing changed
+    expect(settled).toBeLessThanOrEqual(3)
+  })
+})
+
+describe('filtering experience', () => {
+  it('keeps the current list visible, with a spinner, while new filter results load', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    let calls = 0
+    server.use(
+      http.get('/api/workshops', async () => {
+        calls += 1
+        if (calls > 1) await gate // hold every request after the first
+        return HttpResponse.json([makeWorkshop({ title: calls > 1 ? 'Second result' : 'First result' })])
+      }),
+    )
+    const { user } = renderApp(<App />, { route: '/workshops', user: staff })
+    expect(await screen.findByRole('heading', { name: 'First result' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Today' }))
+    expect(await screen.findByRole('status', { name: 'Updating workshops' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'First result' })).toBeInTheDocument() // not blanked out
+
+    release()
+    expect(await screen.findByRole('heading', { name: 'Second result' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole('status', { name: 'Updating workshops' })).not.toBeInTheDocument())
+  })
+
+  it('waits for a pause in typing before querying, and shows a spinner meanwhile', async () => {
+    const { seen } = captureWorkshopQueries()
+    const { user } = renderApp(<App />, { route: '/workshops', user: staff })
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    const before = seen.length
+
+    await user.type(screen.getByRole('textbox', { name: 'Search' }), 'pottery')
+    expect(screen.getByRole('status', { name: 'Searching' })).toBeInTheDocument()
+    expect(seen.length).toBe(before) // 7 keystrokes, no requests yet
+
+    await waitFor(() => expect(seen[seen.length - 1].get('q')).toBe('pottery'))
+    expect(seen.length - before).toBe(1) // one request for the whole word
+  })
+})

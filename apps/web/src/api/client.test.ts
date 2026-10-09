@@ -1,31 +1,31 @@
 import { http, HttpResponse } from 'msw'
 import { server } from '../test/server'
-import { ApiError, api, asList, get, post, setUnauthorizedHandler, tokenStore } from './client'
+import { ApiError, api, asList, get, post, patch, setUnauthorizedHandler } from './client'
 
 describe('api client', () => {
-  it('sends the Bearer token when logged in', async () => {
-    tokenStore.set('abc')
-    let auth: string | null = null
-    server.use(
-      http.get('/api/ping', ({ request }) => {
-        auth = request.headers.get('authorization')
-        return HttpResponse.json({ ok: true })
-      }),
-    )
+  it('sends cookies and the CSRF header, and never an Authorization header', async () => {
+    // msw's Request does not reflect `credentials` reliably, so inspect the fetch init directly.
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const seen: { xrw: string | null; auth: string | null; method: string }[] = []
+    const record = ({ request }: { request: Request }) => {
+      seen.push({
+        xrw: request.headers.get('x-requested-with'),
+        auth: request.headers.get('authorization'),
+        method: request.method,
+      })
+      return HttpResponse.json({})
+    }
+    server.use(http.get('/api/ping', record), http.post('/api/ping', record), http.patch('/api/ping', record), http.delete('/api/ping', record))
     await get('/ping')
-    expect(auth).toBe('Bearer abc')
-  })
-
-  it('omits Authorization when there is no token', async () => {
-    let auth: string | null = 'x'
-    server.use(
-      http.get('/api/ping', ({ request }) => {
-        auth = request.headers.get('authorization')
-        return HttpResponse.json({})
-      }),
-    )
-    await get('/ping')
-    expect(auth).toBeNull()
+    await post('/ping', { a: 1 })
+    await patch('/ping', { a: 1 })
+    await api('DELETE', '/ping')
+    expect(fetchSpy.mock.calls.map(([, init]) => init?.credentials)).toEqual(['include', 'include', 'include', 'include'])
+    expect(seen.map((s) => s.method)).toEqual(['GET', 'POST', 'PATCH', 'DELETE'])
+    for (const s of seen) {
+      expect(s.xrw).toBe('XMLHttpRequest')
+      expect(s.auth).toBeNull()
+    }
   })
 
   it('serialises query params, skipping empty values', async () => {
@@ -62,23 +62,19 @@ describe('api client', () => {
     expect(await get('/empty')).toBeNull()
   })
 
-  it('clears the token and calls the logout handler on 401', async () => {
-    tokenStore.set('abc')
+  it('calls the unauthorized handler on 401', async () => {
     const onUnauth = vi.fn()
     setUnauthorizedHandler(onUnauth)
     server.use(http.get('/api/secret', () => HttpResponse.json({ message: 'Unauthorized' }, { status: 401 })))
     await expect(get('/secret')).rejects.toMatchObject({ status: 401 })
-    expect(tokenStore.get()).toBeNull()
     expect(onUnauth).toHaveBeenCalledOnce()
   })
 
   it('does not log out on a 401 from the login endpoint', async () => {
-    tokenStore.set('abc')
     const onUnauth = vi.fn()
     setUnauthorizedHandler(onUnauth)
     server.use(http.post('/api/auth/login', () => HttpResponse.json({ message: 'Invalid credentials' }, { status: 401 })))
     await expect(post('/auth/login', {})).rejects.toThrow('Invalid credentials')
-    expect(tokenStore.get()).toBe('abc')
     expect(onUnauth).not.toHaveBeenCalled()
   })
 
@@ -129,26 +125,5 @@ describe('asList', () => {
     expect(asList({ items: [3] })).toEqual([3])
     expect(asList({ data: [4] })).toEqual([4])
     expect(asList({})).toEqual([])
-  })
-})
-
-describe('tokenStore', () => {
-  it('round-trips and survives storage errors', () => {
-    tokenStore.set('t')
-    expect(tokenStore.get()).toBe('t')
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('denied')
-    })
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('denied')
-    })
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
-      throw new Error('denied')
-    })
-    expect(tokenStore.get()).toBeNull()
-    expect(() => {
-      tokenStore.set('x')
-      tokenStore.clear()
-    }).not.toThrow()
   })
 })

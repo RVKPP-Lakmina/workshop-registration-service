@@ -42,8 +42,10 @@ resource "aws_apigatewayv2_api" "this" {
   cors_configuration {
     allow_origins = var.cors_allowed_origins
     allow_methods = ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
-    allow_headers = ["Authorization", "Content-Type"]
-    max_age       = 600
+    allow_headers = ["Authorization", "Content-Type", "X-Requested-With"]
+    # The browser session is an HttpOnly cookie, so credentialed CORS is required (and origins cannot be "*").
+    allow_credentials = true
+    max_age           = 600
   }
 }
 

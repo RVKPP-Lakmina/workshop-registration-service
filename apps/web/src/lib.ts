@@ -1,3 +1,5 @@
+import type { AuditEntry } from './types'
+
 export function fmtDate(iso?: string | null) {
   if (!iso) return ''
   return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
@@ -34,4 +36,24 @@ export function range(preset: Preset, cFrom: string, cTo: string): { from?: stri
     default:
       return {}
   }
+}
+
+/** Short label for what an audit entry is about (title/name/attendee/code, else the entity id). */
+export function auditSummary(e: AuditEntry) {
+  const after = e.after as Record<string, unknown> | null | undefined
+  const label = after && (after.title ?? after.name ?? after.attendeeName ?? after.code)
+  return typeof label === 'string' ? label : e.entityId
+}
+
+/** "just now", "5 min ago", "3 h ago", "2 d ago", then a short date. */
+export function timeAgo(iso: string, now: number = Date.now()) {
+  const secs = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000))
+  if (secs < 45) return 'just now'
+  const mins = Math.round(secs / 60)
+  if (mins < 60) return `${mins} min ago`
+  const hours = Math.round(mins / 60)
+  if (hours < 24) return `${hours} h ago`
+  const days = Math.round(hours / 24)
+  if (days < 7) return `${days} d ago`
+  return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
 }
