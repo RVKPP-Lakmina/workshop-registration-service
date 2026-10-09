@@ -169,3 +169,19 @@ describe('Workshops page', () => {
     })
   })
 })
+
+describe('time-based presets', () => {
+  const settle = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+  it.each(['Next 7 days', 'Today', 'This week'])('does not refetch in a loop with "%s"', async (label) => {
+    const { seen } = captureWorkshopQueries()
+    const { user } = renderApp(<App />, { route: '/workshops', user: staff })
+    await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    await user.click(screen.getByRole('button', { name: label }))
+    await settle(500)
+    const settled = seen.length
+    await settle(500)
+    expect(seen.length).toBe(settled) // no new requests while nothing changed
+    expect(settled).toBeLessThanOrEqual(3)
+  })
+})

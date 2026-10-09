@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { asList, get } from '../api/client'
@@ -32,7 +32,9 @@ export default function Workshops() {
   const [hasSeats, setHasSeats] = useState(false)
   const [q, setQ] = useState('')
 
-  const r = range(preset, cFrom, cTo)
+  // Computed once per selection: range() reads the clock, so recomputing it every render would change
+  // the query key each time and refetch in a loop.
+  const r = useMemo(() => range(preset, cFrom, cTo), [preset, cFrom, cTo])
   const params = { ...r, status, location, q: q.trim(), hasSeats: hasSeats ? true : undefined }
 
   const { data, error, isLoading } = useQuery({
