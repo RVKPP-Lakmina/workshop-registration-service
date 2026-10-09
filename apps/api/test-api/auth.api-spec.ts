@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { TEST_JWT_SECRET } from './config.ts';
 import { USERS } from './fixtures.ts';
 import {
-  type App, NIL_UUID, TEST_PASSWORD, client, createApp, expectError, login,
+  type App, NIL_UUID, TEST_PASSWORD, client, createApp, expectError, login, sessionToken,
 } from './helpers.ts';
 import { expectUserShape } from './shapes.ts';
 
@@ -23,8 +23,8 @@ describe('auth', () => {
         password: TEST_PASSWORD,
       });
       expect(res.status).toBe(200);
-      expect(Object.keys(res.body).sort()).toEqual(['token', 'user']);
-      expect(res.body.token.split('.')).toHaveLength(3);
+      expect(Object.keys(res.body)).toEqual(['user']); // the JWT is only in the HttpOnly cookie
+      expect(sessionToken(res).split('.')).toHaveLength(3);
       expectUserShape(res.body.user);
       expect(res.body.user).toMatchObject({
         id: USERS[key].id,

@@ -102,3 +102,36 @@ describe('config validate', () => {
     expect(() => validate({ APP_ENV: 'production' })).toThrow(/Invalid environment configuration[\s\S]*- DATABASE_URL is required/);
   });
 });
+
+describe('session cookie settings', () => {
+  it('defaults to Lax, not Secure in development, and a stable cookie name', () => {
+    const out = validate({ ...base });
+    expect(out).toMatchObject({ COOKIE_SECURE: 'false', COOKIE_SAMESITE: 'lax', SESSION_COOKIE_NAME: 'wr_session', COOKIE_DOMAIN: '' });
+  });
+
+  it.each(['staging', 'production'])('defaults to Secure in %s', (APP_ENV) => {
+    expect(validate({ ...good, APP_ENV }).COOKIE_SECURE).toBe('true');
+  });
+
+  it.each(['staging', 'production'])('refuses an insecure cookie in %s', (APP_ENV) => {
+    expect(problemsOf({ ...good, APP_ENV, COOKIE_SECURE: 'false' })).toContain(`COOKIE_SECURE must be true in ${APP_ENV}`);
+  });
+
+  it('rejects an unknown SameSite value and a non-boolean Secure', () => {
+    const problems = problemsOf({ ...base, COOKIE_SAMESITE: 'sometimes', COOKIE_SECURE: 'yes' });
+    expect(problems.some((p) => p.startsWith('COOKIE_SAMESITE must be'))).toBe(true);
+    expect(problems.some((p) => p.startsWith('COOKIE_SECURE must be'))).toBe(true);
+  });
+
+  it('requires Secure when SameSite=none', () => {
+    expect(problemsOf({ ...base, COOKIE_SAMESITE: 'none' })).toContain(
+      'COOKIE_SAMESITE=none requires COOKIE_SECURE=true (browsers reject it otherwise)',
+    );
+    expect(problemsOf({ ...base, COOKIE_SAMESITE: 'none', COOKIE_SECURE: 'true' })).toEqual([]);
+  });
+
+  it('normalises case and validates the cookie name', () => {
+    expect(validate({ ...base, COOKIE_SAMESITE: 'STRICT' }).COOKIE_SAMESITE).toBe('strict');
+    expect(problemsOf({ ...base, SESSION_COOKIE_NAME: 'bad name;' }).some((p) => p.startsWith('SESSION_COOKIE_NAME'))).toBe(true);
+  });
+});

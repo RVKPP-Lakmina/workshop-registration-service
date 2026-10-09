@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { AppError } from '../common/app-error.js';
@@ -10,6 +11,9 @@ import { IS_PUBLIC, ROLES } from '../common/decorators.js';
 import type { AuthUser } from '../common/decorators.js';
 import type { Role } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { readCookie, sessionCookieName } from './session-cookie.js';
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -17,6 +21,7 @@ export class JwtAuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly jwt: JwtService,
     private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
   ) {}
 
   async canActivate(ctx: ExecutionContext) {
@@ -27,8 +32,18 @@ export class JwtAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const req = ctx.switchToHttp().getRequest();
-    const [scheme, token] = (req.headers.authorization ?? '').split(' ');
-    if (scheme !== 'Bearer' || !token) throw unauthorized();
+    const [scheme, bearer] = (req.headers.authorization ?? '').split(' ');
+    const bearerToken = scheme === 'Bearer' && bearer ? bearer : undefined;
+    // Browsers authenticate with the HttpOnly session cookie; a Bearer header stays supported for scripts and tests.
+    const token =
+      bearerToken ?? readCookie(req.headers.cookie, sessionCookieName(this.config));
+    if (!token) throw unauthorized();
+
+    // Cookies are sent automatically by the browser, so cookie-authenticated writes must prove they come from
+    // our own JS: a custom header cannot be set by a cross-site form and forces a CORS preflight for fetch.
+    if (!bearerToken && !SAFE_METHODS.has(req.method) && !req.headers['x-requested-with']) {
+      throw new AppError(403, 'CSRF_REJECTED', 'Missing X-Requested-With header');
+    }
 
     let sub: string;
     try {

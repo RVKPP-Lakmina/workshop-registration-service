@@ -62,6 +62,27 @@ export function validate(config: Record<string, unknown>): Record<string, unknow
     }
   }
 
+  const sameSite = (str(config.COOKIE_SAMESITE) || 'lax').toLowerCase();
+  if (!['lax', 'strict', 'none'].includes(sameSite)) {
+    problems.push(`COOKIE_SAMESITE must be lax, strict or none (got "${str(config.COOKIE_SAMESITE)}")`);
+  }
+  const secureRaw = str(config.COOKIE_SECURE).toLowerCase();
+  if (secureRaw && !['true', 'false'].includes(secureRaw)) {
+    problems.push(`COOKIE_SECURE must be true or false (got "${str(config.COOKIE_SECURE)}")`);
+  }
+  // Secure defaults on everywhere except plain-http local development.
+  const cookieSecure = secureRaw ? secureRaw === 'true' : appEnv !== 'development';
+  if (sameSite === 'none' && !cookieSecure) {
+    problems.push('COOKIE_SAMESITE=none requires COOKIE_SECURE=true (browsers reject it otherwise)');
+  }
+  if ((appEnv === 'staging' || appEnv === 'production') && !cookieSecure) {
+    problems.push(`COOKIE_SECURE must be true in ${appEnv}`);
+  }
+  const cookieName = str(config.SESSION_COOKIE_NAME) || 'wr_session';
+  if (!/^[A-Za-z0-9_-]+$/.test(cookieName)) {
+    problems.push(`SESSION_COOKIE_NAME may only contain letters, digits, "_" and "-" (got "${cookieName}")`);
+  }
+
   if (problems.length) throw new ConfigValidationError(problems);
 
   return {
@@ -73,5 +94,9 @@ export function validate(config: Record<string, unknown>): Record<string, unknow
     TRUST_PROXY: str(config.TRUST_PROXY) || 'false',
     THROTTLE_DISABLED: str(config.THROTTLE_DISABLED) || 'false',
     SEED_ON_START: str(config.SEED_ON_START) || 'false',
+    COOKIE_SECURE: String(cookieSecure),
+    COOKIE_SAMESITE: sameSite,
+    COOKIE_DOMAIN: str(config.COOKIE_DOMAIN),
+    SESSION_COOKIE_NAME: cookieName,
   };
 }

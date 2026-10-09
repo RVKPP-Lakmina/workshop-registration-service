@@ -15,9 +15,9 @@ export function configureApp(app: NestExpressApplication) {
   );
   app.enableCors({
     origin: origins,
-    credentials: false,
-    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Authorization', 'Content-Type'],
+    credentials: true, // the session cookie must be accepted cross-origin; origins stay an explicit allowlist
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With'],
   });
   const v = config.get<string>('TRUST_PROXY');
   if (v && v !== 'false') {

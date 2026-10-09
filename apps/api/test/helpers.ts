@@ -29,7 +29,7 @@ export async function login(
     .post('/api/auth/login')
     .send(creds)
     .expect(200);
-  return res.body.token as string;
+  return sessionToken(res);
 }
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
@@ -71,3 +71,11 @@ export const register = (
       attendeeEmail: `attendee${n}@example.com`,
       joinWaitlistIfFull,
     });
+
+/** The login response carries the JWT only in the HttpOnly session cookie; tests send it back as a Bearer token. */
+export function sessionToken(res: { headers: Record<string, unknown> }): string {
+  const cookies = ([] as string[]).concat((res.headers['set-cookie'] as string[] | string | undefined) ?? []);
+  const raw = cookies.find((c) => c.startsWith('wr_session='));
+  if (!raw) throw new Error('login did not set the wr_session cookie');
+  return decodeURIComponent(raw.split(';')[0].slice('wr_session='.length));
+}

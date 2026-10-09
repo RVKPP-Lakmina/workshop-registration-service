@@ -38,7 +38,7 @@ describe('JwtAuthGuard', () => {
     return {
       jwt,
       prisma,
-      guard: new JwtAuthGuard(reflector as never, jwt as never, prisma as never),
+      guard: new JwtAuthGuard(reflector as never, jwt as never, prisma as never, { get: () => undefined } as never),
     };
   };
   const bearer = makeCtx({ headers: { authorization: 'Bearer t' } });
@@ -130,4 +130,64 @@ describe('RolesGuard', () => {
       });
     }
   }
+});
+
+describe('JwtAuthGuard cookie sessions', () => {
+  const dbUser = { id: 'u1', email: 'e@x.com', name: 'N', role: 'STAFF', isActive: true, passwordHash: 'h' };
+  const setup = (cookieName?: string) => {
+    const reflector = { getAllAndOverride: vi.fn().mockReturnValue(false) };
+    const jwt = { verifyAsync: vi.fn(async () => ({ sub: 'u1' })) };
+    const prisma = { user: { findUnique: vi.fn().mockResolvedValue(dbUser) } };
+    const config = { get: (k: string) => (k === 'SESSION_COOKIE_NAME' ? cookieName : undefined) };
+    return {
+      jwt,
+      guard: new JwtAuthGuard(reflector as never, jwt as never, prisma as never, config as never),
+    };
+  };
+  const req = (method: string, headers: Record<string, string>) => ({ method, headers });
+
+  it('authenticates from the session cookie', async () => {
+    const { guard, jwt } = setup();
+    const r = req('GET', { cookie: 'wr_session=tok123' });
+    expect(await guard.canActivate(makeCtx(r))).toBe(true);
+    expect(jwt.verifyAsync).toHaveBeenCalledWith('tok123');
+    expect((r as { user?: { id: string } }).user?.id).toBe('u1');
+  });
+
+  it('reads the configured cookie name and ignores others', async () => {
+    const { guard, jwt } = setup('custom_sid');
+    await guard.canActivate(makeCtx(req('GET', { cookie: 'wr_session=old; custom_sid=new' })));
+    expect(jwt.verifyAsync).toHaveBeenCalledWith('new');
+    await expectAppError(guard.canActivate(makeCtx(req('GET', { cookie: 'wr_session=old' }))), 401, 'UNAUTHORIZED');
+  });
+
+  it('401 when there is neither a cookie nor a Bearer header', async () => {
+    const { guard } = setup();
+    await expectAppError(guard.canActivate(makeCtx(req('GET', {}))), 401, 'UNAUTHORIZED');
+    await expectAppError(guard.canActivate(makeCtx(req('GET', { cookie: 'other=1' }))), 401, 'UNAUTHORIZED');
+  });
+
+  it.each(['POST', 'PATCH', 'DELETE'])('403 CSRF_REJECTED for a cookie %s without X-Requested-With', async (method) => {
+    const { guard, jwt } = setup();
+    await expectAppError(guard.canActivate(makeCtx(req(method, { cookie: 'wr_session=t' }))), 403, 'CSRF_REJECTED');
+    expect(jwt.verifyAsync).not.toHaveBeenCalled(); // rejected before any work
+  });
+
+  it('allows a cookie write that carries X-Requested-With', async () => {
+    const { guard } = setup();
+    const ctx = makeCtx(req('POST', { cookie: 'wr_session=t', 'x-requested-with': 'XMLHttpRequest' }));
+    expect(await guard.canActivate(ctx)).toBe(true);
+  });
+
+  it.each(['GET', 'HEAD', 'OPTIONS'])('never requires the header for %s', async (method) => {
+    const { guard } = setup();
+    expect(await guard.canActivate(makeCtx(req(method, { cookie: 'wr_session=t' })))).toBe(true);
+  });
+
+  it('does not require the header for Bearer clients, and Bearer wins over a cookie', async () => {
+    const { guard, jwt } = setup();
+    const ctx = makeCtx(req('POST', { authorization: 'Bearer from-header', cookie: 'wr_session=from-cookie' }));
+    expect(await guard.canActivate(ctx)).toBe(true);
+    expect(jwt.verifyAsync).toHaveBeenCalledWith('from-header');
+  });
 });
