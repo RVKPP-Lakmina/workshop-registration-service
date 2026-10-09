@@ -1,0 +1,33 @@
+name: Unit tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+
+concurrency:
+  group: unit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    env:
+      # prisma generate only needs the schema; no connection is made.
+      DATABASE_URL: postgresql://workshop_registration:workshop_registration@localhost:5432/workshop_registration?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version from package.json "packageManager"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm --filter api test:unit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-unit-coverage
+          path: apps/api/coverage
+          if-no-files-found: warn
