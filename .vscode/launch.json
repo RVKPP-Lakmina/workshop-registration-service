@@ -1,0 +1,115 @@
+{
+  // See docs/SETUP.md, "Option C: debugging in VS Code".
+  // Prerequisite for the API configs: Postgres + Redis running (task "deps: up")
+  // and env/.env.development created (task "env: init").
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "API: debug (Nest, node)",
+      "type": "node",
+      "request": "launch",
+      "preLaunchTask": "api: prepare (env, deps, build)",
+      "program": "${workspaceFolder}/apps/api/dist/main.js",
+      "cwd": "${workspaceFolder}/apps/api",
+      "env": { "APP_ENV": "development" },
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"],
+      "resolveSourceMapLocations": ["${workspaceFolder}/apps/api/**", "!**/node_modules/**"],
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "API: attach (local :9229)",
+      // Start the API first with the task "api: watch (debug :9229)" (nest start --debug --watch).
+      "type": "node",
+      "request": "attach",
+      "address": "localhost",
+      "port": 9229,
+      "restart": true,
+      "sourceMaps": true,
+      "localRoot": "${workspaceFolder}/apps/api",
+      "outFiles": ["${workspaceFolder}/apps/api/dist/**/*.js"],
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "API: attach (Docker)",
+      // Start the stack first with the task "docker: up (debug override)".
+      "type": "node",
+      "request": "attach",
+      "address": "localhost",
+      "port": 9229,
+      "restart": true,
+      "sourceMaps": true,
+      "localRoot": "${workspaceFolder}/apps/api",
+      "remoteRoot": "/app/apps/api",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Test: API unit (current file)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/api/node_modules/vitest/vitest.mjs",
+      "args": ["run", "--config", "vitest.config.unit.ts", "--testTimeout=0", "${file}"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "autoAttachChildProcesses": true,
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: API e2e (current file)",
+      // Needs Postgres + Redis (task "deps: up") and a built Prisma client.
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/api/node_modules/vitest/vitest.mjs",
+      "args": ["run", "--config", "vitest.config.e2e.ts", "--testTimeout=0", "${file}"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "env": { "APP_ENV": "development" },
+      "autoAttachChildProcesses": true,
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: API integration test-api (current file)",
+      // Uses the separate workshop_registration_test database (created and reset automatically).
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/api/node_modules/vitest/vitest.mjs",
+      "args": ["run", "--config", "vitest.config.api.ts", "--testTimeout=0", "${file}"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "autoAttachChildProcesses": true,
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Test: Web (current file)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/web/node_modules/vitest/vitest.mjs",
+      "args": ["run", "--testTimeout=0", "${file}"],
+      "cwd": "${workspaceFolder}/apps/web",
+      "autoAttachChildProcesses": true,
+      "smartStep": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Web: Chrome",
+      // Starts the Vite dev server (task "web: dev server"), then opens Chrome with the debugger attached.
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/apps/web",
+      "preLaunchTask": "web: dev server"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full stack: API + Web",
+      "configurations": ["API: debug (Nest, node)", "Web: Chrome"],
+      "stopAll": true
+    }
+  ]
+}

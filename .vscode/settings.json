@@ -1,0 +1,25 @@
+{
+  // Shell scripts must keep LF line endings (CRLF breaks them inside Linux containers).
+  "files.eol": "\n",
+  "files.exclude": {
+    "**/.turbo": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/coverage": true,
+    "**/.turbo": true,
+    "**/src/generated": true,
+    "pnpm-lock.yaml": true
+  },
+  // Monorepo: tell ESLint where each app's config lives (apps/api uses oxlint instead).
+  "eslint.workingDirectories": [{ "directory": "apps/web" }],
+  "[terraform]": {
+    "editor.defaultFormatter": "hashicorp.terraform",
+    "editor.formatOnSave": true
+  },
+  "[terraform-vars]": {
+    "editor.defaultFormatter": "hashicorp.terraform",
+    "editor.formatOnSave": true
+  }
+}

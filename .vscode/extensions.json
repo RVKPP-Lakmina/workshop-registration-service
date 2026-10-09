@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "Prisma.prisma",
+    "dbaeumer.vscode-eslint",
+    "oxc.oxc-vscode",
+    "ms-azuretools.vscode-docker",
+    "hashicorp.terraform",
+    "vitest.explorer",
+    "bradlc.vscode-tailwindcss",
+    "editorconfig.editorconfig",
+    "esbenp.prettier-vscode"
+  ]
+}

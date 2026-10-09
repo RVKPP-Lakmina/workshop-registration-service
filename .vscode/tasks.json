@@ -1,0 +1,153 @@
+{
+  // Run with: Ctrl+Shift+P (Cmd+Shift+P on macOS) -> "Tasks: Run Task".
+  // All tasks run from the repository root and use pnpm scripts from package.json.
+  "version": "2.0.0",
+  "options": { "env": { "APP_ENV": "development" } },
+  "tasks": [
+    {
+      "label": "setup: first time (install, env, deps, migrate, seed)",
+      "dependsOrder": "sequence",
+      "dependsOn": ["install", "env: init", "deps: up", "db: migrate", "db: seed"],
+      "problemMatcher": []
+    },
+    {
+      "label": "install",
+      "type": "shell",
+      "command": "pnpm install",
+      "problemMatcher": []
+    },
+    {
+      "label": "env: init",
+      "detail": "Creates env/.env.development from the committed .example file (never overwrites).",
+      "type": "shell",
+      "command": "pnpm env:init",
+      "problemMatcher": []
+    },
+    {
+      "label": "deps: up",
+      "detail": "Starts only Postgres + Redis in Docker (for coding on the host).",
+      "type": "shell",
+      "command": "pnpm docker:dev-deps",
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: up (full stack)",
+      "type": "shell",
+      "command": "pnpm docker:up",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: up (debug override)",
+      "detail": "Full stack with the API debug port 9229 published. Then run 'API: attach (Docker)'.",
+      "type": "shell",
+      "command": "pnpm docker -f docker-compose.debug.yml up --build",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "docker: down",
+      "type": "shell",
+      "command": "pnpm docker:down",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: migrate",
+      "type": "shell",
+      "command": "pnpm db:migrate",
+      "problemMatcher": []
+    },
+    {
+      "label": "db: seed",
+      "type": "shell",
+      "command": "pnpm db:seed",
+      "problemMatcher": []
+    },
+    {
+      "label": "api: build",
+      "type": "shell",
+      "command": "pnpm --filter api build",
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "api: prepare (env, deps, build)",
+      "detail": "Used by the 'API: debug (Nest, node)' launch configuration.",
+      "dependsOrder": "sequence",
+      "dependsOn": ["env: init", "deps: up", "api: build"],
+      "problemMatcher": []
+    },
+    {
+      "label": "api: watch (debug :9229)",
+      "detail": "nest start --debug --watch. Then run 'API: attach (local :9229)'.",
+      "type": "shell",
+      "command": "pnpm --filter api start:debug",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "nest",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Starting compilation|File change detected",
+          "endsPattern": "Debugger listening|Nest application successfully started"
+        }
+      }
+    },
+    {
+      "label": "web: dev server",
+      "type": "shell",
+      "command": "pnpm --filter web dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "VITE v",
+          "endsPattern": "Local:"
+        }
+      }
+    },
+    {
+      "label": "dev: API + Web (hot reload)",
+      "type": "shell",
+      "command": "pnpm dev",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "check: lint, types, build",
+      "type": "shell",
+      "command": "pnpm exec turbo run lint check-types build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "test: api unit",
+      "type": "shell",
+      "command": "pnpm --filter api test:unit",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test: api e2e",
+      "type": "shell",
+      "command": "pnpm --filter api test:e2e",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test: api integration (workshop_registration_test)",
+      "type": "shell",
+      "command": "pnpm --filter api test:api",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "test: web",
+      "type": "shell",
+      "command": "pnpm --filter web test",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}
