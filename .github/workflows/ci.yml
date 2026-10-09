@@ -44,6 +44,7 @@ jobs:
       - run: pnpm --filter api exec prisma generate
       - run: pnpm turbo run lint check-types build
       - run: pnpm --filter api exec prisma migrate deploy
+      - run: pnpm --filter api exec prisma db seed # e2e logs in as the seeded users
       - run: pnpm --filter api test:e2e
 
   images:
