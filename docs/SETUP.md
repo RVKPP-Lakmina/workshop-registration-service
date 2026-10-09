@@ -101,6 +101,9 @@ Open `env/.env.development.example`: every variable is documented there. The one
 | `REDIS_URL` | How the API reaches Redis (used for rate limiting). |
 | `JWT_SECRET` | Secret used to sign login tokens. **At least 32 characters in staging/production**; anyone who knows it can forge logins. |
 | `JWT_EXPIRES_IN` | How long a login lasts (e.g. `8h`). |
+| `COOKIE_SECURE` | Send the session cookie only over HTTPS. `false` for local http; **must be `true` in staging/production** (the API refuses to start otherwise). |
+| `COOKIE_SAMESITE` | `lax` (default) when the web app and API share a site, `none` when they are on different sites (needs HTTPS and `COOKIE_SECURE=true`). |
+| `COOKIE_DOMAIN` / `SESSION_COOKIE_NAME` | Optional cookie domain (e.g. `.example.com`) and the cookie name (default `wr_session`). |
 | `CORS_ORIGINS` | Comma-separated list of website addresses allowed to call the API from a browser, e.g. `http://localhost:5173,http://localhost:8080`. In staging/production it must be set and must not contain `localhost`. |
 | `TRUST_PROXY` | `true` when the API sits behind nginx or a load balancer, so it sees the real visitor IP. |
 | `THROTTLE_DISABLED` | `true` turns API rate limiting off (handy for tests; refused in staging/production). |
