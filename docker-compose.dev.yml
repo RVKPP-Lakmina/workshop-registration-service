@@ -1,0 +1,35 @@
+# Postgres + Redis only, published on the host for `pnpm dev` / tests / prisma.
+#   pnpm docker:dev-deps         # up -d --wait, using env/.env.${APP_ENV:-development}
+#   pnpm docker:dev-deps:down    # stop (add -v via `pnpm docker --dev down -v`)
+# Ports and credentials come from POSTGRES_* / REDIS_PORT in the env file.
+name: workshop-registration-deps-${APP_ENV:-development}
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in env/.env.<APP_ENV>}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in env/.env.<APP_ENV>}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in env/.env.<APP_ENV>}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata-dev:

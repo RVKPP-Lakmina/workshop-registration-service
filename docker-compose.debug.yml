@@ -1,0 +1,19 @@
+# Optional override that lets VS Code attach a debugger to the API container.
+#
+#   pnpm docker -f docker-compose.debug.yml up --build
+#
+# which is the same as:
+#
+#   docker compose --env-file env/.env.development \
+#     -f docker-compose.yml -f docker-compose.debug.yml up --build
+#
+# Then in VS Code run the launch configuration "API: attach (Docker)".
+# Development use only: never use this file for staging or production.
+services:
+  api:
+    # Same as the image default (`node dist/main`) plus the inspector.
+    # 0.0.0.0 is needed inside the container so Docker can forward the port.
+    command: ["node", "--inspect=0.0.0.0:9229", "dist/main"]
+    ports:
+      # Bound to 127.0.0.1 so the debug port is not reachable from other machines.
+      - "127.0.0.1:9229:9229"

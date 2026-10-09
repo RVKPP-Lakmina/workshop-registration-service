@@ -1,0 +1,80 @@
+# Full stack (postgres + redis + api + web/nginx). All values come from env/.env.${APP_ENV}.
+#
+#   pnpm env:init                       # once: create env/.env.* from the templates
+#   pnpm docker:up                      # == docker compose --env-file env/.env.${APP_ENV:-development} up --build
+#   APP_ENV=staging pnpm docker:up      # (PowerShell: $env:APP_ENV='staging'; pnpm docker:up)
+#   pnpm docker:down                    # add `-v` to also drop the database volume:  pnpm docker down -v
+#
+# Inside the compose network the api talks to the services "postgres" and "redis", so its
+# DATABASE_URL / REDIS_URL are built here from POSTGRES_* (the host-style DATABASE_URL in
+# the env file, with localhost:<port>, is for processes running on your machine).
+# One compose project per environment so dev/staging/production never collide.
+name: workshop-registration-${APP_ENV:-development}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in env/.env.<APP_ENV>}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in env/.env.<APP_ENV>}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in env/.env.<APP_ENV>}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: production
+      APP_ENV: ${APP_ENV:-development}
+      PORT: ${PORT:-3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in env/.env.<APP_ENV>}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      THROTTLE_DISABLED: ${THROTTLE_DISABLED:-false}
+      SEED_ON_START: ${SEED_ON_START:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        APP_ENV: ${APP_ENV:-development}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_APP_NAME: ${VITE_APP_NAME:-}
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-api:3000}
+      DNS_RESOLVER: ${DNS_RESOLVER:-127.0.0.11}
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
